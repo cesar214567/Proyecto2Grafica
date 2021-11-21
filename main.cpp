@@ -1,0 +1,534 @@
+#include <iostream>
+#include "glew.h"
+//#include <glad/glad.h>
+#include <GL/freeglut.h>
+#include "glut_ply.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include "stb_image.h"
+#include "shader.h"
+#include "esfera.h"
+#define POINT_LIGHT_POSITIONS 8
+
+vector<string> texturas = {"jupiter_mapa", "luna_mapa", "tierra_mapa"};
+
+extern Shader *shader_esferas;
+Shader *shader_vacas = nullptr;
+Model_PLY model;
+char *archivo = "models/cow.ply";
+
+Esfera objetos[5];
+int objeto_elegido;
+GLuint p1_id, p2_id;
+float angulo_x;
+float escala, tras_x;
+float camX, camZ;
+const unsigned int SCR_WIDTH = 800;
+const unsigned int SCR_HEIGHT = 600;
+GLint luna_vao, tierra_vao;
+int luna_numIndices, tierra_numIndices;
+unsigned int luna_texture, tierra_texture;
+GLint textura1_id, id_pos1, id_amb1, id_dif1, id_pos2, id_amb2, id_dif2;
+ //matrix_view;
+glm::vec3 camara_posicion = glm::vec3(camX, 0.0f, camZ);
+// positions of the point lights
+glm::vec3 pointLightPositions[] = {
+    glm::vec3(0.f, 0.f, 0.f),
+    glm::vec3(0.f, 0.f, 10.f),
+    glm::vec3(0.f, 10.f, 0.f),
+    glm::vec3(0.f, 10.f, 10.f),
+    glm::vec3(10.f, 0.f, 0.f),
+    glm::vec3(10.f, 0.f, 10.f),
+    glm::vec3(10.f, 10.f, 0.f),
+    glm::vec3(10.f, 10.f, 10.f),
+
+};
+
+unsigned int quadVAO = 0;
+unsigned int quadVBO;
+void renderQuad()
+{
+  if (quadVAO == 0)
+  {
+    // positions
+    glm::vec3 pos1(-1.0f, 1.0f, 0.0f);
+    glm::vec3 pos2(-1.0f, -1.0f, 0.0f);
+    glm::vec3 pos3(1.0f, -1.0f, 0.0f);
+    glm::vec3 pos4(1.0f, 1.0f, 0.0f);
+    // texture coordinates
+    glm::vec2 uv1(0.0f, 1.0f);
+    glm::vec2 uv2(0.0f, 0.0f);
+    glm::vec2 uv3(1.0f, 0.0f);
+    glm::vec2 uv4(1.0f, 1.0f);
+    // normal vector
+    glm::vec3 nm(0.0f, 0.0f, 1.0f);
+
+    // calculate tangent/bitangent vectors of both triangles
+    glm::vec3 tangent1, bitangent1;
+    glm::vec3 tangent2, bitangent2;
+    // triangle 1
+    // ----------
+    glm::vec3 edge1 = pos2 - pos1;
+    glm::vec3 edge2 = pos3 - pos1;
+    glm::vec2 deltaUV1 = uv2 - uv1;
+    glm::vec2 deltaUV2 = uv3 - uv1;
+
+    float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+    tangent1.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+    tangent1.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+    tangent1.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+    bitangent1.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+    bitangent1.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+    bitangent1.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+
+    // triangle 2
+    // ----------
+    edge1 = pos3 - pos1;
+    edge2 = pos4 - pos1;
+    deltaUV1 = uv3 - uv1;
+    deltaUV2 = uv4 - uv1;
+
+    f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+    tangent2.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+    tangent2.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+    tangent2.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+    bitangent2.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+    bitangent2.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+    bitangent2.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+
+    float quadVertices[] = {
+        // positions            // normal         // texcoords  // tangent                          // bitangent
+        pos1.x, pos1.y, pos1.z, nm.x, nm.y, nm.z, uv1.x, uv1.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+        pos2.x, pos2.y, pos2.z, nm.x, nm.y, nm.z, uv2.x, uv2.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+        pos3.x, pos3.y, pos3.z, nm.x, nm.y, nm.z, uv3.x, uv3.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+
+        pos1.x, pos1.y, pos1.z, nm.x, nm.y, nm.z, uv1.x, uv1.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z,
+        pos3.x, pos3.y, pos3.z, nm.x, nm.y, nm.z, uv3.x, uv3.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z,
+        pos4.x, pos4.y, pos4.z, nm.x, nm.y, nm.z, uv4.x, uv4.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z};
+    // configure plane VAO
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    glBindVertexArray(quadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *)(3 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *)(6 * sizeof(float)));
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *)(8 * sizeof(float)));
+    glEnableVertexAttribArray(4);
+    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *)(11 * sizeof(float)));
+  }
+  glBindVertexArray(quadVAO);
+  glDrawArrays(GL_TRIANGLES, 0, 6);
+  glBindVertexArray(0);
+}
+
+char* readShader(char* aShaderFile)
+{
+    FILE* filePointer = fopen(aShaderFile, "rb");
+    char* content = NULL;
+    long numVal = 0;
+
+    fseek(filePointer, 0L, SEEK_END);
+    numVal = ftell(filePointer);
+    fseek(filePointer, 0L, SEEK_SET);
+    content = (char*) malloc((numVal+1) * sizeof(char));
+    fread(content, 1, numVal, filePointer);
+    content[numVal] = '\0';
+    fclose(filePointer);
+    return content;
+}
+
+static void Error(char *message) {
+    printf(message);
+}
+
+/* Compila shader */
+static void CompileShader (GLuint id) {
+    GLint status;
+    glCompileShader(id);
+    glGetShaderiv(id, GL_COMPILE_STATUS, &status);
+    if (!status) {
+        GLint len;
+        glGetShaderiv(id, GL_INFO_LOG_LENGTH, &len);
+        char* message = (char*) malloc(len*sizeof(char));
+        glGetShaderInfoLog(id, len, 0, message);
+        Error(message);
+        free(message);
+    }
+}
+
+/* Link−edita shader */
+static void LinkProgram (GLuint id) {
+    GLint status;
+    glLinkProgram(id);
+    glGetProgramiv(id, GL_LINK_STATUS, &status);
+    if (!status) {
+        GLint len;
+        glGetProgramiv(id, GL_INFO_LOG_LENGTH, &len);
+        char* message = (char*) malloc(len*sizeof(char));
+        glGetProgramInfoLog(id, len, 0, message);
+        Error(message);
+        free(message);
+    }
+}
+
+static void CreateShaderProgram (char* vertexShaderFile, char* fragmentShaderFile, GLuint &p_id) {
+    char*	vertexShader   = readShader(vertexShaderFile);
+    char*	fragmentShader = readShader(fragmentShaderFile);
+
+    /* vertex shader */
+    GLuint v_id = glCreateShader(GL_VERTEX_SHADER);
+    if (v_id == 0)
+        Error("Could not create vertex shader object");
+
+    glShaderSource(v_id, 1, (const char**) &vertexShader, 0);
+    CompileShader(v_id);
+
+    /* fragment shader */
+    GLuint f_id = glCreateShader(GL_FRAGMENT_SHADER);
+    if (f_id == 0)
+        Error("Could not create fragment shader object");
+
+    glShaderSource(f_id, 1, (const char**) &fragmentShader, 0);
+    CompileShader(f_id);
+
+    /* program */
+    p_id = glCreateProgram();
+    if (p_id == 0)
+        Error("Could not create program object");
+    glAttachShader(p_id, v_id);
+    glAttachShader(p_id, f_id);
+    LinkProgram(p_id);
+
+}
+
+
+
+
+
+// Initialization routine.
+void setup(void) {
+  camX = 20.;
+  camZ = 20.;
+  glClearColor(1.0, 1.0, 1.0, 0.0);
+
+  /*angulo_x = 40.;
+  tras_x = 0;
+  escala = 0.3;
+  */
+  //matrix_view.lookAt(10, 10, 10, 0, 0, 0, 0, 1, 0);
+
+  glEnableClientState(GL_VERTEX_ARRAY); // Enable vertex array.
+  glEnable(GL_DEPTH_TEST);
+  //CreateShaderProgram("basico_textura.vs","basico_textura.fs", p1_id);
+
+  //CreateShaderProgram("basico_textura_luces.vs", "basico_textura_luces.fs", p1_id);
+  //CreateShaderProgram("./basico1.vs", "./basico1.fs", p2_id);
+  shader_esferas = new Shader("./1.esferas_textura_luz.vs", "./1.esferas_textura_luz.fs");
+  //shader_vacas = new Shader("./2.vaca.vs", "./2.vaca.fs");
+
+  /*glBindAttribLocation(p2_id, p2_vertex_id, "aPos");
+  glBindAttribLocation(p2_id, p2_normal_id, "aNormal");
+  p2_matrix_model_id = glGetUniformLocation(p2_id, "matrix_model");
+  p2_matrix_view_id = glGetUniformLocation(p2_id, "matrix_view");
+  p2_matrix_projection_id = glGetUniformLocation(p2_id, "matrix_projection");
+  */
+  shader_esferas->bindAttributeLocation(vertex_id, "aPos");
+  shader_esferas->bindAttributeLocation(normal_id, "aNormal");
+  /*glBindAttribLocation(p1_id, vertex_id, "aPos");
+  glBindAttribLocation(p1_id, normal_id, "aNormal");
+  */
+  cout << "aPos: " << vertex_id << endl;
+  cout << "aNormal: " << normal_id << endl;
+  /*matrix_model_id = glGetUniformLocation(p1_id, "matrix_model");
+  matrix_view_id = glGetUniformLocation(p1_id, "matrix_view");
+  matrix_projection_id = glGetUniformLocation(p1_id, "matrix_projection");
+  */
+  for (int i = 0; i < 5; i++)
+  {
+    objetos[i].setup("./textures/"+texturas[rand()%texturas.size()]+".jpg");
+  }
+
+  //int slices = 100;
+  //int stacks = 100;
+  //luna_numIndices = (slices * stacks + slices) * 6;
+  //luna_vao = SolidSphere(2., slices, stacks);
+
+  //tierra_numIndices = (slices * stacks + slices) * 6;
+  //tierra_vao = SolidSphere(6., slices, stacks);
+
+  // load and create a texture
+  // -------------------------
+
+  // texture 1
+  // ---------
+
+  /*glGenTextures(1, &luna_texture);
+  glBindTexture(GL_TEXTURE_2D, luna_texture);
+  // set the texture wrapping parameters
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // set texture wrapping to GL_REPEAT (default wrapping method)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  // set texture filtering parameters
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  // load image, create texture and generate mipmaps
+  int width, height, nrChannels;
+  stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
+  // The FileSystem::getPath(...) is part of the GitHub repository so we can find files on any IDE/platform; replace it with your own image path.
+  unsigned char *data = stbi_load("./textures/luna_mapa.jpg", &width, &height, &nrChannels, 0);
+  if (data)
+  {
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+  } else {
+    std::cout << "Failed to load texture" << std::endl;
+  }
+  stbi_image_free(data);
+  */
+
+  // texture 2
+  // ---------
+  /*glGenTextures(1, &tierra_texture);
+  glBindTexture(GL_TEXTURE_2D, tierra_texture);
+  // set the texture wrapping parameters
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  // set texture filtering parameters
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  // load image, create texture and generate mipmaps
+  //int width, height, nrChannels;
+  stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
+  // The FileSystem::getPath(...) is part of the GitHub repository so we can find files on any IDE/platform; replace it with your own image path.
+  data = stbi_load("./textures/tierra_mapa.jpg", &width, &height, &nrChannels, 0);
+  if (data) {
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+      glGenerateMipmap(GL_TEXTURE_2D);
+  } else {
+      std::cout << "Failed to load texture" << std::endl;
+  }
+  stbi_image_free(data);
+  */
+  shader_esferas->setInt("texture0", 0);
+  //IMPORTANTE
+  //glUniform1i(glGetUniformLocation(p1_id, "texture0"), 0);
+}
+
+void setPointLight(const glm::vec3 value, Shader* shader)
+{
+  shader->setVec3(string("pointLights[0].position"), value);
+  //glUniform3f(glGetUniformLocation(p1_id, "pointLights[0].ambient"), 0.05f, 0.05f, 0.05f);
+  shader->setVec3("pointLights[0].ambient", 0.05f, 0.05f, 0.05f);
+
+  //glUniform3f(glGetUniformLocation(p1_id, "pointLights[0].diffuse"), 0.8f, 0.8f, 0.8f);
+  shader->setVec3("pointLights[0].diffuse", 0.8f, 0.8f, 0.8f);
+  //glUniform3f(glGetUniformLocation(p1_id, "pointLights[0].specular"), 1.0f, 1.0f, 1.0f);
+  shader->setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
+}
+// Drawing routine.
+void drawScene(void) {
+    int vp[4];
+    glGetIntegerv(GL_VIEWPORT, vp);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    //glUseProgram(p1_id);
+    shader_esferas->use();
+    //glUniform3fv(glGetUniformLocation(p1_id, "viewPos"), 1, &camara_posicion[0]);
+    //glUniform1f(glGetUniformLocation(p1_id, "shininess"), 32.0f);
+    shader_esferas->setVec3("viewPos", camara_posicion);
+    shader_esferas->setFloat("shininess", 32.0f);
+
+    //setPOINTLIGHTS
+    for (int i = 0; i < POINT_LIGHT_POSITIONS;i++){
+      setPointLight(pointLightPositions[i], shader_esferas);
+    }
+
+    // point light 1
+    //lightingShader.setVec3("pointLights[0].position", pointLightPositions[0]);
+    //glUniform3fv(glGetUniformLocation(p1_id, "pointLights[0].position"), 1, &pointLightPositions[0][0]);
+    //shader_esferas->setVec3("pointLights[0].position", 1, &pointLightPositions[0][0]);
+    //glUniform3f(glGetUniformLocation(p1_id, "pointLights[0].ambient"), 0.05f, 0.05f, 0.05f);
+    //shader_esferas->setVec3("pointLights[0].ambient", 0.05f, 0.05f, 0.05f);
+
+    //glUniform3f(glGetUniformLocation(p1_id, "pointLights[0].diffuse"), 0.8f, 0.8f, 0.8f);
+    //shader_esferas->setVec3("pointLights[0].diffuse", 0.8f, 0.8f, 0.8f);
+    //glUniform3f(glGetUniformLocation(p1_id, "pointLights[0].specular"), 1.0f, 1.0f, 1.0f);
+    //shader_esferas->setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
+
+    // point light 2
+
+    //lightingShader.setVec3("pointLights[1].position", pointLightPositions[1]);
+    //glUniform3fv(glGetUniformLocation(p1_id, "pointLights[1].position"), 1, &pointLightPositions[1][0]);
+    //lightingShader.setVec3("pointLights[1].ambient", 0.05f, 0.05f, 0.05f);
+    //glUniform3f(glGetUniformLocation(p1_id, "pointLights[1].ambient"), 0.05f, 0.05f, 0.05f);
+    //lightingShader.setVec3("pointLights[1].diffuse", 0.8f, 0.8f, 0.8f);
+    //glUniform3f(glGetUniformLocation(p1_id, "pointLights[1].diffuse"), 0.8f, 0.8f, 0.8f);
+    //glUniform3f(glGetUniformLocation(p1_id, "pointLights[1].specular"), 1.0f, 1.0f, 1.0f);
+
+    glm::mat4 view = glm::mat4(1.0f);
+    glm::mat4 projection = glm::mat4(1.0f);
+
+    //view = glm::translate(view, glm::vec3(0.,0., -10.));
+    view = glm::lookAt(glm::vec3(camX, 0.0f, camZ), glm::vec3(0,0,0), glm::vec3(0,1,0));
+    projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+
+    GLboolean transpose = GL_FALSE;
+
+    //Mi implementacion
+    for (int i=0;i<5;i++){
+      objetos[i].draw(view,projection,transpose);
+    }
+
+    // LUNA
+    /*glm::mat4 matrix_model = glm::mat4(1.0f);
+    matrix_model = glm::translate(matrix_model, glm::vec3(tras_x, 0, 0));
+    matrix_model = glm::scale(matrix_model, glm::vec3(escala, escala, escala));
+    matrix_model = glm::rotate(matrix_model, glm::radians(angulo_x), glm::vec3(1, 0, 0));
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, luna_texture);
+
+
+    //glVertexAttribPointer(vertex_id, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), model.Vertices);
+    glEnableVertexAttribArray(vertex_id);
+    //glVertexAttribPointer(normal_id, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), model.Normales);
+    glEnableVertexAttribArray(normal_id);
+
+    glUniformMatrix4fv(matrix_model_id, 1, transpose, glm::value_ptr(matrix_model));
+    glUniformMatrix4fv(matrix_view_id, 1, transpose, glm::value_ptr(view));
+    glUniformMatrix4fv(matrix_projection_id, 1, transpose, glm::value_ptr(projection));
+
+    ////glDrawArrays(GL_TRIANGLES, 0, model.cantVertices);
+    //glDrawElements(GL_TRIANGLES, model.cantIndices * 3, GL_UNSIGNED_INT, (const void *) model.Indices);
+
+    glBindVertexArray(luna_vao);
+    glDrawElements(GL_TRIANGLES, NumIndices, GL_UNSIGNED_INT, 0);
+
+    glDisableVertexAttribArray(vertex_id);
+    glDisableVertexAttribArray(normal_id);
+
+    // TIERRA
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, tierra_texture);
+
+    //glVertexAttribPointer(vertex_id, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), model.Vertices);
+    glEnableVertexAttribArray(vertex_id);
+    //glVertexAttribPointer(normal_id, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), model.Normales);
+    glEnableVertexAttribArray(normal_id);
+
+    matrix_model = glm::mat4(1.0f);
+    matrix_model = glm::translate(matrix_model, glm::vec3(10, 0, 0));
+    matrix_model = glm::scale(matrix_model, glm::vec3(escala, escala, escala));
+    matrix_model = glm::rotate(matrix_model, glm::radians(angulo_x), glm::vec3(1,0,0));
+
+    glUniformMatrix4fv(matrix_model_id, 1, transpose, glm::value_ptr(matrix_model));
+    glUniformMatrix4fv(matrix_view_id, 1, transpose, glm::value_ptr(view));
+    glUniformMatrix4fv(matrix_projection_id, 1, transpose, glm::value_ptr(projection));
+
+    ////glDrawArrays(GL_TRIANGLES, 0, model.cantVertices);
+    //glDrawElements(GL_TRIANGLES, model.cantIndices * 3, GL_UNSIGNED_INT, (const void *) model.Indices);
+
+    glBindVertexArray(tierra_vao);
+    glDrawElements(GL_TRIANGLES, NumIndices, GL_UNSIGNED_INT, 0);
+
+    glDisableVertexAttribArray(vertex_id);
+    glDisableVertexAttribArray(normal_id);
+    */
+
+    glutSwapBuffers();
+}
+
+// OpenGL window reshape routine.
+void resize(int w, int h) {
+    glViewport(0, 0, (GLsizei) w, (GLsizei) h);
+}
+
+// Keyboard input processing routine.
+void keyInput(unsigned char key, int x, int y) {
+    switch (key) {
+        case 27: exit(0);
+        case '1':
+          objeto_elegido = 0;
+          cout << 1 << endl;
+          break;
+        case '2':
+          objeto_elegido = 1;
+          cout << 2 << endl;
+          break;
+        case '3':
+          objeto_elegido = 2;
+          cout << 3 << endl;
+          break;
+        case '4':
+          objeto_elegido = 3;
+          cout << 4 << endl;
+          break;
+        case '5':
+          objeto_elegido = 4;
+          cout << 5 << endl;
+          break;
+
+        case 'q': objetos[objeto_elegido].angulo_x++; break;
+        case 'Q': objetos[objeto_elegido].angulo_x--; break;
+        case 'w': objetos[objeto_elegido].angulo_y++; break;
+        case 'W': objetos[objeto_elegido].angulo_y--; break;
+        case 'e': objetos[objeto_elegido].angulo_z++; break;
+        case 'E': objetos[objeto_elegido].angulo_z--; break;
+        case 's': objetos[objeto_elegido].escala += 0.1; break;
+        case 'S': objetos[objeto_elegido].escala -= 0.1; break;
+        case 'x': objetos[objeto_elegido].tras_x += 0.1; break;
+        case 'X': objetos[objeto_elegido].tras_x -= 0.1; break;
+        case 'y': objetos[objeto_elegido].tras_y += 0.1; break;
+        case 'Y': objetos[objeto_elegido].tras_y -= 0.1; break;
+        case 'z': objetos[objeto_elegido].tras_z += 0.1; break;
+        case 'Z': objetos[objeto_elegido].tras_z -= 0.1; break;
+        case 'c': camX += 1; break;
+        case 'C': camX -= 1; break;
+        case 'v': camZ += 1; break;
+        case 'V': camZ -= 1; break;
+    }
+    glutPostRedisplay();
+}
+
+// Main routine.
+int main(int argc, char **argv) {
+  srand(time(NULL));
+    model.Load(archivo);
+
+
+    glutInit(&argc, argv);
+
+    //glutInitContextVersion(4, 3);
+    glutInitContextProfile(GLUT_COMPATIBILITY_PROFILE);
+
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH | GLUT_RGB);
+    glutInitWindowSize(500, 500);
+    glutInitWindowPosition(100, 100);
+    glutCreateWindow("Visualizando modelo");
+    glutDisplayFunc(drawScene);
+    glutReshapeFunc(resize);
+    glutKeyboardFunc(keyInput);
+
+    glewExperimental = GL_TRUE;
+    glewInit();
+    // glad: load all OpenGL function pointers
+    // ---------------------------------------
+    /*if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+    {
+        std::cout << "Failed to initialize GLAD" << std::endl;
+        return -1;
+    }*/
+
+    setup();
+    glutMainLoop();
+    return 0;
+}

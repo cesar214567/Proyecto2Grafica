@@ -18,7 +18,6 @@ void main()
    posicion = matrix_model * vec4(aPos, 1.0);
    normal = matrix_model * vec4(aNormal, 0.0);
 
-
    // iluminacion difusa en vertex shader
    //vec3 posicionLuz = vec3(1., 1., -10.);
    //vec3 colorLuz = vec3(1., 1., 1.);

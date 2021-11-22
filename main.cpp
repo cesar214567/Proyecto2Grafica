@@ -1,6 +1,7 @@
 #include <iostream>
 #include "glew.h"
 //#include <glad/glad.h>
+
 #include <GL/freeglut.h>
 #include "glut_ply.h"
 #include <glm/glm.hpp>
@@ -9,29 +10,33 @@
 #include "stb_image.h"
 #include "shader.h"
 #include "esfera.h"
+#include "camera.h"
+#include "fondo.h"
+#include "vaca.h"
 #define POINT_LIGHT_POSITIONS 8
 
 vector<string> texturas = {"jupiter_mapa", "luna_mapa", "tierra_mapa"};
 
 extern Shader *shader_esferas;
-Shader *shader_vacas = nullptr;
+Fondo *fondo = nullptr;
+Fondo *fondo2 = nullptr;
+Vaca *vaca = nullptr;
 Model_PLY model;
 char *archivo = "models/cow.ply";
 
+//camera
+float camX, camZ=3,camY;
+float angle=0;
+Camera camera(glm::vec3(camX, camY, camZ));
+const unsigned int SCR_WIDTH = 800;
+const unsigned int SCR_HEIGHT = 800;
+bool firstMouse = true;
+float lastX = (float)SCR_WIDTH / 2.0;
+float lastY = (float)SCR_HEIGHT / 2.0;
+GLint VAO;
 Esfera objetos[5];
 int objeto_elegido;
-GLuint p1_id, p2_id;
-float angulo_x;
-float escala, tras_x;
-float camX, camZ;
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
-GLint luna_vao, tierra_vao;
-int luna_numIndices, tierra_numIndices;
-unsigned int luna_texture, tierra_texture;
-GLint textura1_id, id_pos1, id_amb1, id_dif1, id_pos2, id_amb2, id_dif2;
  //matrix_view;
-glm::vec3 camara_posicion = glm::vec3(camX, 0.0f, camZ);
 // positions of the point lights
 glm::vec3 pointLightPositions[] = {
     glm::vec3(0.f, 0.f, 0.f),
@@ -56,6 +61,7 @@ void renderQuad()
     glm::vec3 pos2(-1.0f, -1.0f, 0.0f);
     glm::vec3 pos3(1.0f, -1.0f, 0.0f);
     glm::vec3 pos4(1.0f, 1.0f, 0.0f);
+
     // texture coordinates
     glm::vec2 uv1(0.0f, 1.0f);
     glm::vec2 uv2(0.0f, 0.0f);
@@ -235,8 +241,9 @@ void setup(void) {
   //CreateShaderProgram("basico_textura_luces.vs", "basico_textura_luces.fs", p1_id);
   //CreateShaderProgram("./basico1.vs", "./basico1.fs", p2_id);
   shader_esferas = new Shader("./1.esferas_textura_luz.vs", "./1.esferas_textura_luz.fs");
-  //shader_vacas = new Shader("./2.vaca.vs", "./2.vaca.fs");
-
+  fondo = new Fondo("3.fondo_textura", "./textures/fondo.jpg", false);
+  fondo2 = new Fondo("3.fondo_textura", "./textures/luna_mapa.jpg", true);
+  vaca = new Vaca("2.vaca");
   /*glBindAttribLocation(p2_id, p2_vertex_id, "aPos");
   glBindAttribLocation(p2_id, p2_normal_id, "aNormal");
   p2_matrix_model_id = glGetUniformLocation(p2_id, "matrix_model");
@@ -322,10 +329,12 @@ void setup(void) {
   shader_esferas->setInt("texture0", 0);
   //IMPORTANTE
   //glUniform1i(glGetUniformLocation(p1_id, "texture0"), 0);
+
 }
 
 void setPointLight(const glm::vec3 value, Shader* shader)
 {
+  shader->use();
   shader->setVec3(string("pointLights[0].position"), value);
   //glUniform3f(glGetUniformLocation(p1_id, "pointLights[0].ambient"), 0.05f, 0.05f, 0.05f);
   shader->setVec3("pointLights[0].ambient", 0.05f, 0.05f, 0.05f);
@@ -336,6 +345,43 @@ void setPointLight(const glm::vec3 value, Shader* shader)
   shader->setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
 }
 // Drawing routine.
+unsigned int loadTexture(char const *path)
+{
+  unsigned int textureID;
+  glGenTextures(1, &textureID);
+
+  int width, height, nrComponents;
+  unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
+  if (data)
+  {
+    GLenum format;
+    if (nrComponents == 1)
+      format = GL_RED;
+    else if (nrComponents == 3)
+      format = GL_RGB;
+    else if (nrComponents == 4)
+      format = GL_RGBA;
+
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    stbi_image_free(data);
+  }
+  else
+  {
+    std::cout << "Texture failed to load at path: " << path << std::endl;
+    stbi_image_free(data);
+  }
+
+  return textureID;
+}
+
 void drawScene(void) {
     int vp[4];
     glGetIntegerv(GL_VIEWPORT, vp);
@@ -344,13 +390,48 @@ void drawScene(void) {
     shader_esferas->use();
     //glUniform3fv(glGetUniformLocation(p1_id, "viewPos"), 1, &camara_posicion[0]);
     //glUniform1f(glGetUniformLocation(p1_id, "shininess"), 32.0f);
-    shader_esferas->setVec3("viewPos", camara_posicion);
+    shader_esferas->setVec3("viewPos", camera.Position);
     shader_esferas->setFloat("shininess", 32.0f);
 
     //setPOINTLIGHTS
     for (int i = 0; i < POINT_LIGHT_POSITIONS;i++){
       setPointLight(pointLightPositions[i], shader_esferas);
     }
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+    glm::mat4 view = camera.GetViewMatrix();
+
+    //fondo->draw();
+    //fondo2->draw();
+
+
+    /*glm::vec3 lightPos(0.5f, 1.0f, 0.3f);
+
+    shader_fondo->use();
+    unsigned int diffuseMap = loadTexture("resources/textures/brickwall.jpg");
+    unsigned int normalMap = loadTexture("resources/textures/brickwall_normal.jpg");
+
+    shader_fondo->use();
+    shader_fondo->setMat4("projection", projection);
+    shader_fondo->setMat4("view", view);
+    // render normal-mapped quad
+    glm::mat4 model = glm::mat4(1.0f);
+    shader_fondo->setMat4("model", model);
+    shader_fondo->setVec3("viewPos", camera.Position);
+    shader_fondo->setVec3("lightPos", lightPos);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, diffuseMap);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, normalMap);
+    //renderQuad();
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, lightPos);
+    model = glm::scale(model, glm::vec3(0.1f));
+    shader_fondo->setMat4("model", model);
+    //renderQuad();
+    */
+
+
+
 
     // point light 1
     //lightingShader.setVec3("pointLights[0].position", pointLightPositions[0]);
@@ -374,11 +455,9 @@ void drawScene(void) {
     //glUniform3f(glGetUniformLocation(p1_id, "pointLights[1].diffuse"), 0.8f, 0.8f, 0.8f);
     //glUniform3f(glGetUniformLocation(p1_id, "pointLights[1].specular"), 1.0f, 1.0f, 1.0f);
 
-    glm::mat4 view = glm::mat4(1.0f);
-    glm::mat4 projection = glm::mat4(1.0f);
 
     //view = glm::translate(view, glm::vec3(0.,0., -10.));
-    view = glm::lookAt(glm::vec3(camX, 0.0f, camZ), glm::vec3(0,0,0), glm::vec3(0,1,0));
+    view = glm::lookAt(glm::vec3(camX, camY, camZ), glm::vec3(0,0,0), glm::vec3(0,1,0));
     projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 
     GLboolean transpose = GL_FALSE;
@@ -387,6 +466,9 @@ void drawScene(void) {
     for (int i=0;i<5;i++){
       objetos[i].draw(view,projection,transpose);
     }
+    cout << "xd" << endl;
+    //vaca->draw(view, projection);
+    cout << "paso" << endl;
 
     // LUNA
     /*glm::mat4 matrix_model = glm::mat4(1.0f);
@@ -493,11 +575,15 @@ void keyInput(unsigned char key, int x, int y) {
         case 'Z': objetos[objeto_elegido].tras_z -= 0.1; break;
         case 'c': camX += 1; break;
         case 'C': camX -= 1; break;
-        case 'v': camZ += 1; break;
-        case 'V': camZ -= 1; break;
+        case 'v': camY += 1; break;
+        case 'V': camY -= 1; break;
+        case 'b': camZ += 1; break;
+        case 'B': camZ -= 1; break;
     }
     glutPostRedisplay();
 }
+
+
 
 // Main routine.
 int main(int argc, char **argv) {
@@ -511,13 +597,12 @@ int main(int argc, char **argv) {
     glutInitContextProfile(GLUT_COMPATIBILITY_PROFILE);
 
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH | GLUT_RGB);
-    glutInitWindowSize(500, 500);
+    glutInitWindowSize(SCR_WIDTH, SCR_HEIGHT);
     glutInitWindowPosition(100, 100);
     glutCreateWindow("Visualizando modelo");
     glutDisplayFunc(drawScene);
     glutReshapeFunc(resize);
     glutKeyboardFunc(keyInput);
-
     glewExperimental = GL_TRUE;
     glewInit();
     // glad: load all OpenGL function pointers

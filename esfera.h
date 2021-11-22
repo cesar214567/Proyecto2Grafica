@@ -1,6 +1,5 @@
 #include <iostream>
 #include "glew.h"
-//#include <glad/glad.h>
 #include <GL/freeglut.h>
 #include "glut_ply.h"
 #include <glm/glm.hpp>
@@ -13,8 +12,6 @@
 using namespace std;
 Shader *shader_esferas = nullptr;
 
-GLint POSITION_ATTRIBUTE = 0, NORMAL_ATTRIBUTE = 1, TEXCOORD0_ATTRIBUTE = 8;
-GLint vertex_id = 0, normal_id = 1;
 GLuint matrix_model_id, matrix_view_id, matrix_projection_id;
 GLint p2_vertex_id = 0, p2_normal_id = 1;
 GLuint p2_matrix_model_id, p2_matrix_view_id, p2_matrix_projection_id;
@@ -92,9 +89,7 @@ GLuint SolidSphere(float radius, int slices, int stacks)
   return vao;
 }
 
-float float_random(float max){
-  return static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * max;
-}
+
 
 class Esfera {
   public:
@@ -155,7 +150,7 @@ class Esfera {
     matrix_model = glm::rotate(matrix_model, glm::radians(angulo_x), glm::vec3(1, 0, 0));
     matrix_model = glm::rotate(matrix_model, glm::radians(angulo_y), glm::vec3(0, 1, 0));
     matrix_model = glm::rotate(matrix_model, glm::radians(angulo_z), glm::vec3(0, 0, 1));
-
+    shader_esferas->use();
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
 

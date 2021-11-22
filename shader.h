@@ -1,6 +1,7 @@
 #ifndef SHADER_H
 #define SHADER_H
 
+//#include "glew.h"
 #include "glew.h"
 #include <glm/glm.hpp>
 
@@ -8,7 +9,12 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
-
+GLint POSITION_ATTRIBUTE = 0, NORMAL_ATTRIBUTE = 1, TEXCOORD0_ATTRIBUTE = 8;
+GLint vertex_id = 0, normal_id = 1;
+float float_random(float max)
+{
+  return static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * max;
+}
 class Shader
 {
 public:

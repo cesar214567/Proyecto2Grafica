@@ -14,7 +14,7 @@
 #include "fondo.h"
 #include "vaca.h"
 #define POINT_LIGHT_POSITIONS 8
-
+#define ESFERAS 6
 vector<string> texturas = {"jupiter_mapa", "luna_mapa", "tierra_mapa"};
 
 extern Shader *shader_esferas;
@@ -34,7 +34,7 @@ bool firstMouse = true;
 float lastX = (float)SCR_WIDTH / 2.0;
 float lastY = (float)SCR_HEIGHT / 2.0;
 GLint VAO;
-Esfera objetos[5];
+Esfera objetos[ESFERAS];
 int objeto_elegido;
  //matrix_view;
 // positions of the point lights
@@ -261,7 +261,7 @@ void setup(void) {
   matrix_view_id = glGetUniformLocation(p1_id, "matrix_view");
   matrix_projection_id = glGetUniformLocation(p1_id, "matrix_projection");
   */
-  for (int i = 0; i < 5; i++)
+  for (int i = 0; i < ESFERAS; i++)
   {
     objetos[i].setup("./textures/"+texturas[rand()%texturas.size()]+".jpg");
   }
@@ -400,8 +400,8 @@ void drawScene(void) {
     glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
     glm::mat4 view = camera.GetViewMatrix();
 
-    //fondo->draw();
-    //fondo2->draw();
+    fondo->draw();
+    fondo2->draw();
 
 
     /*glm::vec3 lightPos(0.5f, 1.0f, 0.3f);
@@ -463,7 +463,7 @@ void drawScene(void) {
     GLboolean transpose = GL_FALSE;
 
     //Mi implementacion
-    for (int i=0;i<5;i++){
+    for (int i=0;i<ESFERAS;i++){
       objetos[i].draw(view,projection,transpose);
     }
     cout << "xd" << endl;

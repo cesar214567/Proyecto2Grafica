@@ -132,11 +132,11 @@ class Esfera {
     angulo_x = 0.;
     angulo_y = 0.;
     angulo_z = 0.;
-    tras_x = float_random(10.0f);
+    tras_x = float_random(15.0f);
     tras_y = float_random(5.0f);
-    tras_z = float_random(10.0f);
+    tras_z = float_random(15.0f);
     escala = float_random(1.0f);
-    radius = float_random(1.5f) + 2;
+    radius = float_random(1.5f) + 1;
     cout<<tras_x<<" "<<tras_y<<" "<<tras_z<<endl;
     vao = SolidSphere(radius, slices, stacks);
     setTexture(filename);

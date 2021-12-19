@@ -15,14 +15,6 @@
 #include "vaca.h"
 #define POINT_LIGHT_POSITIONS 8
 #define ESFERAS 6
-vector<string> texturas = {"jupiter_mapa", "luna_mapa", "tierra_mapa"};
-
-extern Shader *shader_esferas;
-Fondo *fondo = nullptr;
-Fondo *fondo2 = nullptr;
-Vaca *vaca = nullptr;
-Model_PLY model;
-char *archivo = "models/cow.ply";
 
 //camera
 float camX, camZ=3,camY;
@@ -34,8 +26,6 @@ bool firstMouse = true;
 float lastX = (float)SCR_WIDTH / 2.0;
 float lastY = (float)SCR_HEIGHT / 2.0;
 GLint VAO;
-Esfera objetos[ESFERAS];
-int objeto_elegido;
  //matrix_view;
 // positions of the point lights
 glm::vec3 pointLightPositions[] = {
@@ -241,146 +231,17 @@ void setup(void) {
   //CreateShaderProgram("basico_textura_luces.vs", "basico_textura_luces.fs", p1_id);
   //CreateShaderProgram("./basico1.vs", "./basico1.fs", p2_id);
   shader_esferas = new Shader("./1.esferas_textura_luz.vs", "./1.esferas_textura_luz.fs");
-  fondo = new Fondo("3.fondo_textura", "./textures/fondo.jpg", false);
-  fondo2 = new Fondo("3.fondo_textura", "./textures/luna_mapa.jpg", true);
-  vaca = new Vaca("2.vaca");
-  /*glBindAttribLocation(p2_id, p2_vertex_id, "aPos");
-  glBindAttribLocation(p2_id, p2_normal_id, "aNormal");
-  p2_matrix_model_id = glGetUniformLocation(p2_id, "matrix_model");
-  p2_matrix_view_id = glGetUniformLocation(p2_id, "matrix_view");
-  p2_matrix_projection_id = glGetUniformLocation(p2_id, "matrix_projection");
-  */
+
   shader_esferas->bindAttributeLocation(vertex_id, "aPos");
   shader_esferas->bindAttributeLocation(normal_id, "aNormal");
-  /*glBindAttribLocation(p1_id, vertex_id, "aPos");
-  glBindAttribLocation(p1_id, normal_id, "aNormal");
-  */
+
   cout << "aPos: " << vertex_id << endl;
   cout << "aNormal: " << normal_id << endl;
-  /*matrix_model_id = glGetUniformLocation(p1_id, "matrix_model");
-  matrix_view_id = glGetUniformLocation(p1_id, "matrix_view");
-  matrix_projection_id = glGetUniformLocation(p1_id, "matrix_projection");
-  */
-  for (int i = 0; i < ESFERAS; i++)
-  {
-    objetos[i].setup("./textures/"+texturas[rand()%texturas.size()]+".jpg");
-  }
 
-  //int slices = 100;
-  //int stacks = 100;
-  //luna_numIndices = (slices * stacks + slices) * 6;
-  //luna_vao = SolidSphere(2., slices, stacks);
 
-  //tierra_numIndices = (slices * stacks + slices) * 6;
-  //tierra_vao = SolidSphere(6., slices, stacks);
-
-  // load and create a texture
-  // -------------------------
-
-  // texture 1
-  // ---------
-
-  /*glGenTextures(1, &luna_texture);
-  glBindTexture(GL_TEXTURE_2D, luna_texture);
-  // set the texture wrapping parameters
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // set texture wrapping to GL_REPEAT (default wrapping method)
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  // set texture filtering parameters
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  // load image, create texture and generate mipmaps
-  int width, height, nrChannels;
-  stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
-  // The FileSystem::getPath(...) is part of the GitHub repository so we can find files on any IDE/platform; replace it with your own image path.
-  unsigned char *data = stbi_load("./textures/luna_mapa.jpg", &width, &height, &nrChannels, 0);
-  if (data)
-  {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-  } else {
-    std::cout << "Failed to load texture" << std::endl;
-  }
-  stbi_image_free(data);
-  */
-
-  // texture 2
-  // ---------
-  /*glGenTextures(1, &tierra_texture);
-  glBindTexture(GL_TEXTURE_2D, tierra_texture);
-  // set the texture wrapping parameters
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  // set texture filtering parameters
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  // load image, create texture and generate mipmaps
-  //int width, height, nrChannels;
-  stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
-  // The FileSystem::getPath(...) is part of the GitHub repository so we can find files on any IDE/platform; replace it with your own image path.
-  data = stbi_load("./textures/tierra_mapa.jpg", &width, &height, &nrChannels, 0);
-  if (data) {
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-      glGenerateMipmap(GL_TEXTURE_2D);
-  } else {
-      std::cout << "Failed to load texture" << std::endl;
-  }
-  stbi_image_free(data);
-  */
-  shader_esferas->setInt("texture0", 0);
-  //IMPORTANTE
-  //glUniform1i(glGetUniformLocation(p1_id, "texture0"), 0);
 
 }
 
-void setPointLight(const glm::vec3 value, Shader* shader)
-{
-  shader->use();
-  shader->setVec3(string("pointLights[0].position"), value);
-  //glUniform3f(glGetUniformLocation(p1_id, "pointLights[0].ambient"), 0.05f, 0.05f, 0.05f);
-  shader->setVec3("pointLights[0].ambient", 0.05f, 0.05f, 0.05f);
-
-  //glUniform3f(glGetUniformLocation(p1_id, "pointLights[0].diffuse"), 0.8f, 0.8f, 0.8f);
-  shader->setVec3("pointLights[0].diffuse", 0.8f, 0.8f, 0.8f);
-  //glUniform3f(glGetUniformLocation(p1_id, "pointLights[0].specular"), 1.0f, 1.0f, 1.0f);
-  shader->setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
-}
-// Drawing routine.
-unsigned int loadTexture(char const *path)
-{
-  unsigned int textureID;
-  glGenTextures(1, &textureID);
-
-  int width, height, nrComponents;
-  unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
-  if (data)
-  {
-    GLenum format;
-    if (nrComponents == 1)
-      format = GL_RED;
-    else if (nrComponents == 3)
-      format = GL_RGB;
-    else if (nrComponents == 4)
-      format = GL_RGBA;
-
-    glBindTexture(GL_TEXTURE_2D, textureID);
-    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    stbi_image_free(data);
-  }
-  else
-  {
-    std::cout << "Texture failed to load at path: " << path << std::endl;
-    stbi_image_free(data);
-  }
-
-  return textureID;
-}
 
 void drawScene(void) {
     int vp[4];

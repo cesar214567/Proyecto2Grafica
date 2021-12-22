@@ -10,4 +10,5 @@ int main()
   temp.push_back({4, {4, 4}});
   float* p1 = &temp[0].first;
   cout<<p1[7]<<endl;
+  cout<<sizeof(triplet)<<endl;
 }

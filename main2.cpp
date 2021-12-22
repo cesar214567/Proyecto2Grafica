@@ -19,8 +19,6 @@ float escala;
 
 //camera
 float camX, camZ,camY;
-float angle=0;
-Camera camera(glm::vec3(camX, camY, camZ));
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 800;
 GLint VAO;
@@ -34,7 +32,7 @@ void setup(void) {
   camY = 0.;
 
   glClearColor(1.0, 1.0, 1.0, 0.0);
-  escala = 3.f;
+  escala = 0.25f;
   /*angulo_x = 40.;
   tras_x = 0;
   escala = 0.3;
@@ -43,24 +41,102 @@ void setup(void) {
 
   glEnableClientState(GL_VERTEX_ARRAY); // Enable vertex array.
   glEnable(GL_DEPTH_TEST);
-  glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-  glm::mat4 view = camera.GetViewMatrix();
-  for (int i=0;i<2;i++){
-    Letter letter("6.fondo_textura", 0.f, 0.f, 0.f);
-    letter.f();
-    letter.setup(projection,view);
-    letras.push_back(letter);
-  }
-}
 
+  float fila1= 1.f;
+  float fila2 = 0.35f;
+  float fila3 = -0.35f;
+
+  float sangria1 = -0.1f;
+  float sangria2 = -0.25f;
+  float sangria3 = -0.f;
+
+  Letter F("6.fondo_textura", 0.7f + sangria1, fila1, 0.f);
+  F.f();
+  F.setup();
+  letras.push_back(F);
+
+  Letter E("6.fondo_textura", 1.1f + sangria1, fila1, 0.f);
+  E.e();
+  E.setup();
+  letras.push_back(E);
+
+  Letter L("6.fondo_textura", 1.5f + sangria1, fila1, 0.f);
+  L.l();
+  L.setup();
+  letras.push_back(L);
+
+  Letter I("6.fondo_textura", 1.9f + sangria1, fila1, 0.f);
+  I.i();
+  I.setup();
+  letras.push_back(I);
+
+  Letter Z("6.fondo_textura", 2.4f + sangria1, fila1, 0.f);
+  Z.Z();
+  Z.setup();
+  letras.push_back(Z);
+
+  Letter C("6.fondo_textura", 0.5f + sangria2, fila2, 0.f);
+  C.C();
+  C.setup();
+  letras.push_back(C);
+
+  Letter U("6.fondo_textura", 0.9f + sangria2, fila2, 0.f);
+  U.U();
+  U.setup();
+  letras.push_back(U);
+
+  Letter M("6.fondo_textura", 1.4f + sangria2, fila2, 0.f);
+  M.M();
+  M.setup();
+  letras.push_back(M);
+
+  Letter P("6.fondo_textura", 1.9f + sangria2, fila2, 0.f);
+  P.P();
+  P.setup();
+  letras.push_back(P);
+
+  Letter L2("6.fondo_textura", 2.4f + sangria2, fila2, 0.f);
+  L2.l();
+  L2.setup();
+  letras.push_back(L2);
+
+  Letter E2("6.fondo_textura", 2.8f + sangria2, fila2, 0.f);
+  E2.e();
+  E2.setup();
+  letras.push_back(E2);
+
+  Letter V("6.fondo_textura", 0.8f + sangria3, fila3, 0.f);
+  V.V();
+  V.setup();
+  letras.push_back(V);
+
+  Letter A("6.fondo_textura", 1.2f + sangria3, fila3, 0.f);
+  A.A();
+  A.setup();
+  letras.push_back(A);
+
+  Letter L3("6.fondo_textura", 1.7f + sangria3, fila3, 0.f);
+  L3.l();
+  L3.setup();
+  letras.push_back(L3);
+
+  Letter E3("6.fondo_textura", 2.1f + sangria3, fila3, 0.f);
+  E3.e();
+  E3.setup();
+  letras.push_back(E3);
+}
 
 void drawScene(void) {
     int vp[4];
     glGetIntegerv(GL_VIEWPORT, vp);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    //glUseProgram(p1_id);
+
+    Camera camera(glm::vec3(camX, camY, camZ));
+    glm::mat4 projection = glm::ortho(-0.3f, 3.0f, -3.0f, 3.0f);
+    //glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+    glm::mat4 view = camera.GetViewMatrix();
     for(auto letra:letras){
-      letra.draw(escala,angulo_x,angulo_y,angulo_z);
+      letra.draw(escala, angulo_x, angulo_y, angulo_z, projection, view);
     }
 
     glutSwapBuffers();
@@ -92,6 +168,13 @@ void keyInput(unsigned char key, int x, int y) {
         case 'b': camZ += 1; break;
         case 'B': camZ -= 1; break;
     }
+    cout << "x: " << angulo_x << endl;
+    cout << "y: " << angulo_y << endl;
+    cout << "z: " << angulo_z << endl;
+    cout << "escala: " << escala << endl;
+    cout << "camx: " << camX << endl;
+    cout << "camy: " << camY << endl;
+    cout << "camz: " << camZ << endl;
     glutPostRedisplay();
 }
 
